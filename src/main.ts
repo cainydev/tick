@@ -41,7 +41,7 @@ function renderForm() {
 function renderCountdown(target: Date) {
   app.innerHTML = `
     <div class="text-center">
-      <div id="clock" class="font-mono font-bold tabular-nums text-6xl sm:text-8xl"></div>
+      <div id="clock" dir="ltr" class="font-mono font-bold tabular-nums text-6xl sm:text-8xl select-none"></div>
       <p class="mt-6 text-neutral-400">until ${target.toLocaleString()}</p>
       <a href="/" class="mt-10 inline-block text-sm text-neutral-500 hover:text-white">new timer</a>
     </div>`
@@ -49,15 +49,28 @@ function renderCountdown(target: Date) {
   const clock = app.querySelector<HTMLDivElement>('#clock')!
   const pad = (n: number) => String(n).padStart(2, '0')
 
+  // secret: click the clock to toggle Persian digits
+  let persian = false
+  const toPersian = (s: string) => s.replace(/\d/g, (c) => '۰۱۲۳۴۵۶۷۸۹'[+c])
+  clock.addEventListener('click', () => {
+    persian = !persian
+    clock.classList.toggle('font-mono', !persian)
+    clock.classList.toggle('font-persian', persian)
+    tick()
+  })
+
   const tick = () => {
     const left = Math.max(0, Math.ceil((target.getTime() - Date.now()) / 1000))
     const d = Math.floor(left / 86400)
     const h = Math.floor((left % 86400) / 3600)
     const m = Math.floor((left % 3600) / 60)
     const s = left % 60
-    const text = left === 0 ? "Time's up!" : `${d ? d + 'd ' : ''}${pad(h)}:${pad(m)}:${pad(s)}`
+    const hms = `${pad(h)}:${pad(m)}:${pad(s)}`
+    const text = persian
+      ? left === 0 ? 'وقت تمام شد!' : toPersian(`${d ? d + ' روز ' : ''}${hms}`)
+      : left === 0 ? "Time's up!" : `${d ? d + 'd ' : ''}${hms}`
     clock.textContent = text
-    document.title = `${text} · Tick`
+    document.title = text
     if (left === 0) clearInterval(timer)
   }
   const timer = setInterval(tick, 250)
