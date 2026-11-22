@@ -1,120 +1,135 @@
 import './style.css'
 
-// URL formats:
-//   /<unix seconds in base36>   absolute time, e.g. /tzk3a0
-//   /<duration>                 relative to page load, e.g. /20m, /1h30m, /90s, /2d (bare number = minutes)
-//   /at<H[MM]>                  next occurrence of that local time of day, e.g. /at18, /at1830, /at930
-// Durations are checked first; as base36 they would decode to 1970, so real codes never collide.
-const UNITS: Record<string, number> = { d: 86400, h: 3600, m: 60, s: 1 }
-const parseDuration = (code: string): number | null => {
-  if (/^\d+$/.test(code)) return +code * 60
-  if (!/^(\d+[dhms])+$/i.test(code)) return null
-  let seconds = 0
-  for (const [, n, unit] of code.toLowerCase().matchAll(/(\d+)([dhms])/g)) seconds += +n * UNITS[unit]
-  return seconds
+type p = { p: number[]; n: string[] }
+type l = p & { r: number }
+type t = { m: number; l?: l }
+type f = { s: number; u: boolean; i?: number }
+
+const u = { s: 1e3, m: 6e4, h: 36e5, d: 864e5 }
+
+const d = (s: string) => /^(\d+|(\d+[smhd])+)$/.test(s)
+
+const k = (s: string) =>
+  [...s.matchAll(/([a-z]*)(\d+)([smhd])/g)].map(([, n, v, x]) => ({ n, v: +v * u[x as keyof typeof u], r: 'smhd'.indexOf(x) }))
+
+const p = (s: string): p | null => {
+  if (/^\d+$/.test(s)) return +s ? { p: [+s * u.m], n: [''] } : null
+  if (!/^([a-z]*\d+[smhd])+$/.test(s)) return null
+  const a = k(s).reduce<p>(
+    (a, t, i, b) =>
+      i && !t.n && t.r < b[i - 1].r
+        ? { p: [...a.p.slice(0, -1), a.p.at(-1)! + t.v], n: a.n }
+        : { p: [...a.p, t.v], n: [...a.n, t.n] },
+    { p: [], n: [] },
+  )
+  return a.p.every((x) => x > 0) ? a : null
 }
 
-// /at1830 → next occurrence of that local time of day (today, or tomorrow if already past)
-const parseTimeOfDay = (code: string): Date | null => {
-  const match = code.match(/^at(\d{1,2})(\d{2})?$/i)
-  if (!match) return null
-  const [h, m] = [+match[1], +(match[2] ?? 0)]
-  if (h > 23 || m > 59) return null
-  const date = new Date()
-  date.setHours(h, m, 0, 0)
-  if (date.getTime() <= Date.now()) date.setDate(date.getDate() + 1)
-  return date
+const l = (s: string): l | null => {
+  const [, b, n] = s.match(/^(.+?)(?:x([1-9]\d*))?$/) ?? []
+  const a = b ? p(b) : null
+  return a && { ...a, r: n ? +n : 1 / 0 }
 }
 
-const encode = (date: Date) => Math.floor(date.getTime() / 1000).toString(36)
-const decode = (code: string): Date | null => {
-  const timeOfDay = parseTimeOfDay(code)
-  if (timeOfDay) return timeOfDay
-  const duration = parseDuration(code)
-  if (duration !== null) return new Date(Date.now() + duration * 1000)
-  if (!/^[0-9a-z]+$/i.test(code)) return null
-  const date = new Date(parseInt(code, 36) * 1000)
-  return isNaN(date.getTime()) ? null : date
+const o = (x: l | null) => (x && (x.p.length > 1 || x.r < 1 / 0 || x.n.join('')) ? x : null)
+
+const a = (s: string, n: number): number | null => {
+  const [, h, m = '0'] = s.match(/^at(\d{1,2})(\d{2})?$/) ?? []
+  if (!h || +h > 23 || +m > 59) return null
+  const x = new Date(n)
+  x.setHours(+h, +m, 0, 0)
+  return x.getTime() > n ? x.getTime() : x.setDate(x.getDate() + 1)
 }
 
-const app = document.querySelector<HTMLDivElement>('#app')!
-const code = location.pathname.slice(1).split('/')[0]
-
-if (!code) renderForm()
-else {
-  const target = decode(code)
-  target ? renderCountdown(target) : renderError()
+const m = (s: string, n: number): number | null => {
+  if (!s) return n
+  if (d(s)) return p(s)?.p.length === 1 ? n + p(s)!.p[0] : null
+  return a(s, n) ?? (/^[0-9a-z]+$/.test(s) ? parseInt(s, 36) * 1e3 : null)
 }
 
-function renderForm() {
-  // default: one hour from now, formatted for datetime-local in local time
-  const d = new Date(Date.now() + 3600_000)
-  d.setMinutes(d.getMinutes() - d.getTimezoneOffset())
-  const value = d.toISOString().slice(0, 16)
-
-  app.innerHTML = `
-    <h1 class="absolute top-6 left-1/2 -translate-x-1/2 text-sm font-mono text-neutral-500">tick</h1>
-    <form class="flex items-center gap-3">
-      <input type="datetime-local" name="when" required value="${value}"
-        class="bg-transparent border-b border-neutral-700 focus:border-white py-2 text-xl font-mono outline-none transition-colors [color-scheme:dark]" />
-      <button class="rounded-md bg-white text-black text-sm font-medium px-3 py-1.5 hover:bg-neutral-300 transition-colors">Start</button>
-    </form>`
-
-  app.querySelector('form')!.addEventListener('submit', (e) => {
-    e.preventDefault()
-    const when = new FormData(e.target as HTMLFormElement).get('when') as string
-    location.href = '/' + encode(new Date(when))
-  })
+const r = (s: string, n: number): t | null => {
+  const [a, b = '', ...c] = s.toLowerCase().slice(1).split('/')
+  if (c.length) return null
+  const x = b ? null : o(l(a))
+  if (x) return { m: n, l: x }
+  const y = m(a, n)
+  const z = b ? l(b) : undefined
+  return y === null || z === null ? null : { m: y, ...(z && { l: z }) }
 }
 
-function renderCountdown(target: Date) {
-  app.innerHTML = `
+const w = ({ p, n, r }: l) => {
+  const k = (['d', 'h', 'm', 's'] as const).find((k) => p.every((x) => x % u[k] === 0))!
+  return p.map((x, i) => n[i] + x / u[k] + k).join('') + (r < 1 / 0 ? `x${r}` : '')
+}
+
+const h = (x: t) => `/${Math.floor(x.m / 1e3).toString(36)}` + (x.l ? `/${w(x.l)}` : '')
+
+const j = (p: number[], t: number, i = 0): f => (t < p[i] ? { s: p[i] - t, u: false, i } : j(p, t - p[i], i + 1))
+
+const f = ({ m, l }: t, n: number): f => {
+  const x = n - m
+  if (x < 0) return { s: -x, u: false }
+  if (!l) return { s: x, u: true }
+  const c = l.p.reduce((a, b) => a + b)
+  const e = c * l.r
+  return x >= e ? { s: x - e, u: true } : j(l.p, x % c)
+}
+
+const q = (n: number) => `${Math.floor(n)}`.padStart(2, '0')
+
+const c = ({ s, u }: f) => {
+  const x = u ? Math.floor(s / 1e3) : Math.ceil(s / 1e3)
+  const d = Math.floor(x / 86400)
+  return (u ? '+' : '') + (d ? `${d}d ` : '') + [(x % 86400) / 3600, (x % 3600) / 60, x % 60].map(q).join(':')
+}
+
+const e = (s: string) => s.replace('d ', ' روز ').replace(/\d/g, (x) => '۰۱۲۳۴۵۶۷۸۹'[+x])
+
+const g = document.querySelector('#app')!
+
+const v = (x: t) => {
+  const s = (x.l?.p ?? []).map(() => '<span class="size-1.5 rounded-full"></span>').join('')
+  g.innerHTML = `
     <div class="text-center">
-      <div id="clock" dir="ltr" class="font-mono font-bold tabular-nums text-6xl sm:text-8xl select-none"></div>
-      <p class="mt-6 text-neutral-400"><span id="relation">until</span> ${target.toLocaleString()}</p>
-      <a href="/" class="mt-10 inline-block text-sm text-neutral-500 hover:text-white">new timer</a>
+      <div dir="ltr" class="font-mono font-bold tabular-nums text-7xl sm:text-9xl select-none transition-colors"></div>
+      <p class="mt-4 h-6 text-neutral-400"></p>
+      <div class="mt-4 flex justify-center gap-2">${s}</div>
     </div>`
 
-  const clock = app.querySelector<HTMLDivElement>('#clock')!
-  const pad = (n: number) => String(n).padStart(2, '0')
+  const [z, y, w] = [...g.firstElementChild!.children]
+  const q = [...w.children]
+  let i = false
 
-  // secret: click the clock to toggle Persian digits
-  let persian = false
-  const toPersian = (s: string) => s.replace(/\d/g, (c) => '۰۱۲۳۴۵۶۷۸۹'[+c])
-  clock.addEventListener('click', () => {
-    persian = !persian
-    clock.classList.toggle('font-mono', !persian)
-    clock.classList.toggle('font-persian', persian)
-    tick()
-  })
-
-  const relation = app.querySelector<HTMLSpanElement>('#relation')!
-
-  // counts down to the target, then keeps counting up from it ("+00:04:12")
-  const tick = () => {
-    const diff = target.getTime() - Date.now()
-    const past = diff <= 0
-    const secs = past ? Math.floor(-diff / 1000) : Math.ceil(diff / 1000)
-    const d = Math.floor(secs / 86400)
-    const h = Math.floor((secs % 86400) / 3600)
-    const m = Math.floor((secs % 3600) / 60)
-    const s = secs % 60
-    const days = d ? d + (persian ? ' روز ' : 'd ') : ''
-    const raw = `${past ? '+' : ''}${days}${pad(h)}:${pad(m)}:${pad(s)}`
-    const text = persian ? toPersian(raw) : raw
-    clock.textContent = text
-    clock.classList.toggle('text-neutral-500', past)
-    relation.textContent = past ? 'since' : 'until'
-    document.title = text
+  const k = () => {
+    const a = f(x, Date.now())
+    const n = !x.l ? '' : a.i !== undefined ? x.l.n[a.i] : a.u ? '' : 'until loop'
+    const o = i ? e(c(a)) : c(a)
+    z.textContent = o
+    y.textContent = n
+    document.title = n ? `${n} ${o}` : o
+    z.classList.toggle('text-neutral-500', (a.i ?? 0) % 2 === 1)
+    q.forEach((n, j) => {
+      n.classList.toggle('bg-white', j === a.i)
+      n.classList.toggle('bg-neutral-700', j !== a.i)
+    })
   }
-  setInterval(tick, 250)
-  tick()
+
+  z.addEventListener('click', () => {
+    i = !i
+    z.classList.toggle('font-mono', !i)
+    z.classList.toggle('font-persian', i)
+    k()
+  })
+  z.setAttribute('title', new Date(x.m).toLocaleString())
+  setInterval(k, 250)
+  k()
 }
 
-function renderError() {
-  app.innerHTML = `
-    <div class="text-center">
-      <p class="text-2xl">That's not a valid timer.</p>
-      <a href="/" class="mt-6 inline-block text-neutral-400 hover:text-white">make one</a>
-    </div>`
+const b = () => {
+  const x = r(location.pathname, Math.floor(Date.now() / 1e3) * 1e3)
+  if (!x) return void (g.innerHTML = '<p class="text-2xl">not a timer</p>')
+  history.replaceState(null, '', h(x))
+  v(x)
 }
+
+b()
