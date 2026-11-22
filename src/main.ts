@@ -5,31 +5,47 @@ type p = { p: number[]; n: string[] }
 type l = p & { s: string }
 type t = { m: number; l?: l }
 type f = { s: number; u: boolean; i?: number }
+type i = { n: string; v: number }
+type w = { c: number; p: i[]; r: number }
 
 const u = { s: 1e3, m: 6e4, h: 36e5, d: 864e5 }
 
 const d = (s: string) => /^(\d+|(\d+[smhd])+)$/.test(s)
 
-const k = (s: string) =>
-  [...s.matchAll(/(?:([1-9]\d{0,2})x)?([a-z]*)(\d+)([smhd])/g)].map(([, c, n, v, x]) => ({
-    c: c ? +c : 0,
-    n,
-    v: +v * u[x as keyof typeof u],
-    r: 'smhd'.indexOf(x),
-  }))
+const k = (s: string) => [...s.matchAll(/([1-9]\d{0,2})x|([()])|([a-z]*)(\d+)([smhd])/g)]
+
+const n = (t: RegExpMatchArray[], i: number, a: w[] = []): [w[], number] | null => {
+  if (i >= t.length || t[i][2] === ')') return [a, i]
+  const c = +(t[i][1] ?? 0)
+  const j = c ? i + 1 : i
+  const [, , o, e, v, x] = t[j] ?? []
+  if (o === '(') {
+    const b = n(t, j + 1)
+    const s = b && t[b[1]]?.[2] === ')' ? z(b[0]) : null
+    return s && n(t, b![1] + 1, [...a, { c: c || 1, p: s, r: -1 }])
+  }
+  if (!x) return null
+  const r = 'smhd'.indexOf(x)
+  const q = +v * u[x as keyof typeof u]
+  const l = a.at(-1)
+  return n(
+    t,
+    j + 1,
+    !c && !e && l && r < l.r
+      ? [...a.slice(0, -1), { ...l, p: [{ ...l.p[0], v: l.p[0].v + q }], r }]
+      : [...a, { c: c || 1, p: [{ n: e, v: q }], r }],
+  )
+}
+
+const z = (a: w[]): i[] | null =>
+  a.reduce((s, x) => s + x.c * x.p.length, 0) > 999 ? null : a.flatMap((x) => Array.from({ length: x.c }, () => x.p).flat())
 
 const p = (s: string): p | null => {
   if (/^\d+$/.test(s)) return +s ? { p: [+s * u.m], n: [''] } : null
-  if (!/^(([1-9]\d{0,2}x)?[a-z]*\d+[smhd])+$/.test(s)) return null
-  const a = k(s).reduce<{ c: number; n: string; v: number }[]>(
-    (a, t, i, b) =>
-      i && !t.c && !t.n && t.r < b[i - 1].r
-        ? [...a.slice(0, -1), { ...a.at(-1)!, v: a.at(-1)!.v + t.v }]
-        : [...a, { c: t.c || 1, n: t.n, v: t.v }],
-    [],
-  )
-  const e = a.flatMap((x) => Array.from({ length: x.c }, () => x))
-  return a.every((x) => x.v > 0) ? { p: e.map((x) => x.v), n: e.map((x) => x.n) } : null
+  const t = k(s)
+  const a = t.map((x) => x[0]).join('') === s ? n(t, 0) : null
+  const b = a && a[1] === t.length ? z(a[0]) : null
+  return b?.length && b.every((x) => x.v > 0) ? { p: b.map((x) => x.v), n: b.map((x) => x.n) } : null
 }
 
 const l = (s: string): l | null => {
@@ -92,7 +108,7 @@ const v = (x: t) => {
     <div class="text-center">
       <div dir="ltr" class="font-mono font-bold tabular-nums text-7xl sm:text-9xl select-none transition-colors"></div>
       <p class="mt-4 h-6 text-neutral-400"></p>
-      <div class="mt-4 flex justify-center gap-2">${s}</div>
+      <div class="mt-4 flex flex-wrap justify-center gap-2">${s}</div>
     </div>`
 
   const [z, y, w] = [...g.firstElementChild!.children]

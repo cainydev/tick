@@ -20,14 +20,15 @@ before the moment it counts down, after it counts up.
 
 ## loop
 
-| url                | means                   |
-| ------------------ | ----------------------- |
-| `/25m5m`           | 25m, then 5m            |
-| `/6x30s2m`         | 30s six times, then 2m  |
-| `/work25mbreak5m`  | labeled phases          |
-| `/at1830/4x50m10m` | starts at 18:30         |
+| url                  | means                     |
+| -------------------- | ------------------------- |
+| `/25m5m`             | 25m, then 5m              |
+| `/6x30s2m`           | 30s six times, then 2m    |
+| `/8x(work20s10s)`    | 20s and 10s, eight times  |
+| `/work25mbreak5m`    | labeled phases            |
+| `/at1830/4x50m10m`   | starts at 18:30           |
 
-loops repeat forever. a new phase starts at every label or count, or wherever units stop decreasing: `1h30m` is one phase, `25m5m` is two.
+loops repeat forever. a new phase starts at every label, count or bracket, or wherever units stop decreasing: `1h30m` is one phase, `25m5m` is two.
 
 ## links
 
