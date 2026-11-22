@@ -121,8 +121,8 @@ const v = (x: t) => {
     k()
   })
   z.setAttribute('title', new Date(x.m).toLocaleString())
-  setInterval(k, 250)
-  k()
+  const t = () => (k(), setTimeout(t, 1e3 - (Date.now() % 1e3)))
+  t()
 }
 
 const b = () => {
