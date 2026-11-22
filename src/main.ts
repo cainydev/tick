@@ -1,7 +1,7 @@
 import './style.css'
 
 type p = { p: number[]; n: string[] }
-type l = p & { r: number }
+type l = p & { r: number; s: string }
 type t = { m: number; l?: l }
 type f = { s: number; u: boolean; i?: number }
 
@@ -26,9 +26,9 @@ const p = (s: string): p | null => {
 }
 
 const l = (s: string): l | null => {
-  const [, b, n] = s.match(/^(.+?)(?:x([1-9]\d*))?$/) ?? []
+  const [, n, b] = s.match(/^(?:([1-9]\d*)x)?(.+)$/) ?? []
   const a = b ? p(b) : null
-  return a && { ...a, r: n ? +n : 1 / 0 }
+  return a && { ...a, r: n ? +n : 1 / 0, s }
 }
 
 const o = (x: l | null) => (x && (x.p.length > 1 || x.r < 1 / 0 || x.n.join('')) ? x : null)
@@ -57,12 +57,7 @@ const r = (s: string, n: number): t | null => {
   return y === null || z === null ? null : { m: y, ...(z && { l: z }) }
 }
 
-const w = ({ p, n, r }: l) => {
-  const k = (['d', 'h', 'm', 's'] as const).find((k) => p.every((x) => x % u[k] === 0))!
-  return p.map((x, i) => n[i] + x / u[k] + k).join('') + (r < 1 / 0 ? `x${r}` : '')
-}
-
-const h = (x: t) => `/${Math.floor(x.m / 1e3).toString(36)}` + (x.l ? `/${w(x.l)}` : '')
+const h = (x: t) => `/${Math.floor(x.m / 1e3).toString(36)}` + (x.l ? `/${x.l.s}` : '')
 
 const j = (p: number[], t: number, i = 0): f => (t < p[i] ? { s: p[i] - t, u: false, i } : j(p, t - p[i], i + 1))
 
@@ -111,7 +106,6 @@ const v = (x: t) => {
     z.textContent = o
     y.textContent = n
     document.title = m
-    z.classList.toggle('text-neutral-500', (a.i ?? 0) % 2 === 1)
     q.forEach((n, j) => {
       n.classList.toggle('bg-white', j === a.i)
       n.classList.toggle('bg-neutral-700', j !== a.i)
