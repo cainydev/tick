@@ -99,14 +99,18 @@ const v = (x: t) => {
   const [z, y, w] = [...g.firstElementChild!.children]
   const q = [...w.children]
   let i = false
+  let h = ''
 
   const k = () => {
     const a = f(x, Date.now())
     const n = !x.l ? '' : a.i !== undefined ? x.l.n[a.i] : a.u ? '' : 'until loop'
     const o = i ? e(c(a)) : c(a)
+    const m = n ? `${n} ${o}` : o
+    if (m === h) return
+    h = m
     z.textContent = o
     y.textContent = n
-    document.title = n ? `${n} ${o}` : o
+    document.title = m
     z.classList.toggle('text-neutral-500', (a.i ?? 0) % 2 === 1)
     q.forEach((n, j) => {
       n.classList.toggle('bg-white', j === a.i)
@@ -122,7 +126,9 @@ const v = (x: t) => {
   })
   z.setAttribute('title', new Date(x.m).toLocaleString())
   const t = () => (k(), setTimeout(t, 1e3 - (Date.now() % 1e3)))
+  const p = () => (k(), requestAnimationFrame(p))
   t()
+  p()
 }
 
 const b = () => {
