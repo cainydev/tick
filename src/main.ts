@@ -1,4 +1,5 @@
 import './style.css'
+import y from '../README.md?raw'
 
 type p = { p: number[]; n: string[] }
 type l = p & { r: number; s: string }
@@ -125,7 +126,13 @@ const v = (x: t) => {
   p()
 }
 
+const w = () => {
+  g.innerHTML = '<pre class="max-w-2xl text-sm text-neutral-300 whitespace-pre-wrap"></pre>'
+  g.firstElementChild!.textContent = y.split('## dev')[0].trim()
+}
+
 const b = () => {
+  if (/^\/(help|howto)\/?$/i.test(location.pathname)) return w()
   const x = r(location.pathname, Math.floor(Date.now() / 1e3) * 1e3)
   if (!x) return void (g.innerHTML = '<p class="text-2xl">not a timer</p>')
   history.replaceState(null, '', h(x))
