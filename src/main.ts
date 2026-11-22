@@ -107,7 +107,7 @@ const v = (x: t) => {
   g.innerHTML = `
     <div class="text-center">
       <div dir="ltr" class="font-mono font-bold tabular-nums text-7xl sm:text-9xl select-none transition-colors"></div>
-      <p class="mt-4 h-6 text-neutral-400"></p>
+      <p class="mt-4 h-7 text-xl text-neutral-400"></p>
       <div class="mt-4 flex flex-wrap justify-center gap-2">${s}</div>
     </div>`
 
