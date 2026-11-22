@@ -12,7 +12,7 @@ const u = { s: 1e3, m: 6e4, h: 36e5, d: 864e5 }
 
 const d = (s: string) => /^(\d+|(\d+[smhd])+)$/.test(s)
 
-const k = (s: string) => [...s.matchAll(/([1-9]\d{0,2})x|([()])|([a-z]*)(\d+)([smhd])/g)]
+const k = (s: string) => [...s.matchAll(/([1-9]\d{0,2})x|([()])|([a-z_]*)(\d+)([smhd])/g)]
 
 const n = (t: RegExpMatchArray[], i: number, a: w[] = []): [w[], number] | null => {
   if (i >= t.length || t[i][2] === ')') return [a, i]
@@ -33,7 +33,7 @@ const n = (t: RegExpMatchArray[], i: number, a: w[] = []): [w[], number] | null 
     j + 1,
     !c && !e && l && r < l.r
       ? [...a.slice(0, -1), { ...l, p: [{ ...l.p[0], v: l.p[0].v + q }], r }]
-      : [...a, { c: c || 1, p: [{ n: e, v: q }], r }],
+      : [...a, { c: c || 1, p: [{ n: e.replace(/_/g, ' '), v: q }], r }],
   )
 }
 
@@ -55,18 +55,35 @@ const l = (s: string): l | null => {
 
 const o = (x: l | null) => (x && (x.p.length > 1 || x.n.join('')) ? x : null)
 
+const t = (s: string) => (s.length > 2 ? [+s.slice(0, -2), +s.slice(-2)] : [+s, 0])
+
+const x = (y: number, o: number, d: number, h: number, m: number, z?: number) =>
+  z === undefined ? new Date(y, o, d, h, m).getTime() : Date.UTC(y, o, d, h, m) - z * 6e4
+
 const a = (s: string, n: number): number | null => {
-  const [, h, m = '0'] = s.match(/^at(\d{1,2})(\d{2})?$/) ?? []
-  if (!h || +h > 23 || +m > 59) return null
-  const x = new Date(n)
-  x.setHours(+h, +m, 0, 0)
-  return x.getTime() > n ? x.getTime() : x.setDate(x.getDate() + 1)
+  const [, e, g, i] = s.match(/^at(\d{1,4}|\d{8}|\d{12})(?:([+-])(\d{1,4}))?$/) ?? []
+  if (!e) return null
+  const [k, l] = i ? t(i) : [0, 0]
+  if (k > 14 || l > 59) return null
+  const z = g ? (g === '-' ? -1 : 1) * (k * 60 + l) : undefined
+  if (e.length < 5) {
+    const [h, m] = t(e)
+    if (h > 23 || m > 59) return null
+    const c = new Date(n + (z ?? 0) * 6e4)
+    const [y, o, d] = z === undefined ? [c.getFullYear(), c.getMonth(), c.getDate()] : [c.getUTCFullYear(), c.getUTCMonth(), c.getUTCDate()]
+    const v = x(y, o, d, h, m, z)
+    return v > n ? v : x(y, o, d + 1, h, m, z)
+  }
+  const [y, o, d, h, m] = [e.slice(0, 4), e.slice(4, 6), e.slice(6, 8), e.slice(8, 10), e.slice(10)].map((w) => +w)
+  const c = new Date(Date.UTC(y, o - 1, d))
+  return c.getUTCMonth() === o - 1 && c.getUTCDate() === d && h < 24 && m < 60 ? x(y, o - 1, d, h, m, z) : null
 }
 
 const m = (s: string, n: number): number | null => {
   if (!s) return n
   if (d(s)) return p(s)?.p.length === 1 ? n + p(s)!.p[0] : null
-  return a(s, n) ?? (/^[0-9a-z]+$/.test(s) ? parseInt(s, 36) * 1e3 : null)
+  if (s.startsWith('at')) return a(s, n)
+  return /^[0-9a-z]{1,8}$/.test(s) ? parseInt(s, 36) * 1e3 : null
 }
 
 const r = (s: string, n: number): t | null => {
@@ -102,7 +119,7 @@ const e = (s: string) => s.replace('d ', ' روز ').replace(/\d/g, (x) => '۰۱
 
 const g = document.querySelector('#app')!
 
-const v = (x: t) => {
+const v = (x: t, j: string) => {
   const s = (x.l?.p ?? []).map(() => '<span class="size-1.5 rounded-full"></span>').join('')
   g.innerHTML = `
     <div class="text-center">
@@ -118,7 +135,7 @@ const v = (x: t) => {
 
   const k = () => {
     const a = f(x, Date.now())
-    const n = !x.l ? '' : a.i !== undefined ? x.l.n[a.i] : a.u ? '' : 'until loop'
+    const n = a.i !== undefined ? x.l!.n[a.i] : j ? `${a.u ? 'since' : 'until'} ${j}` : x.l && !a.u ? 'until loop' : ''
     const o = i ? e(c(a)) : c(a)
     const m = n ? `${n} ${o}` : o
     if (m === h) return
@@ -150,12 +167,20 @@ const w = () => {
   g.firstElementChild!.textContent = y.split('## dev')[0].trim()
 }
 
+const s = (x: string) => {
+  try {
+    return decodeURIComponent(x)
+  } catch {
+    return x
+  }
+}
+
 const b = () => {
   if (/^\/(help|howto)\/?$/i.test(location.pathname)) return w()
   const x = r(location.pathname, Math.floor(Date.now() / 1e3) * 1e3)
   if (!x) return void (g.innerHTML = '<p class="text-2xl">not a timer</p>')
-  history.replaceState(null, '', h(x))
-  v(x)
+  history.replaceState(null, '', h(x) + location.hash)
+  v(x, s(location.hash.slice(1)).replace(/_/g, ' '))
 }
 
 b()
