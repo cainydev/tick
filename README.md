@@ -22,12 +22,12 @@ before the moment it counts down, after it counts up.
 
 | url                | means                   |
 | ------------------ | ----------------------- |
-| `/25m5m`           | 25m, 5m, repeat forever |
-| `/6x30s1m`         | 6 rounds, then count up |
+| `/25m5m`           | 25m, then 5m            |
+| `/6x30s2m`         | 30s six times, then 2m  |
 | `/work25mbreak5m`  | labeled phases          |
 | `/at1830/4x50m10m` | starts at 18:30         |
 
-a new phase starts at every label, or wherever units stop decreasing: `1h30m` is one phase, `25m5m` is two.
+loops repeat forever. a new phase starts at every label or count, or wherever units stop decreasing: `1h30m` is one phase, `25m5m` is two.
 
 ## links
 

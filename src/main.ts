@@ -2,7 +2,7 @@ import './style.css'
 import y from '../README.md?raw'
 
 type p = { p: number[]; n: string[] }
-type l = p & { r: number; s: string }
+type l = p & { s: string }
 type t = { m: number; l?: l }
 type f = { s: number; u: boolean; i?: number }
 
@@ -11,28 +11,33 @@ const u = { s: 1e3, m: 6e4, h: 36e5, d: 864e5 }
 const d = (s: string) => /^(\d+|(\d+[smhd])+)$/.test(s)
 
 const k = (s: string) =>
-  [...s.matchAll(/([a-z]*)(\d+)([smhd])/g)].map(([, n, v, x]) => ({ n, v: +v * u[x as keyof typeof u], r: 'smhd'.indexOf(x) }))
+  [...s.matchAll(/(?:([1-9]\d{0,2})x)?([a-z]*)(\d+)([smhd])/g)].map(([, c, n, v, x]) => ({
+    c: c ? +c : 0,
+    n,
+    v: +v * u[x as keyof typeof u],
+    r: 'smhd'.indexOf(x),
+  }))
 
 const p = (s: string): p | null => {
   if (/^\d+$/.test(s)) return +s ? { p: [+s * u.m], n: [''] } : null
-  if (!/^([a-z]*\d+[smhd])+$/.test(s)) return null
-  const a = k(s).reduce<p>(
+  if (!/^(([1-9]\d{0,2}x)?[a-z]*\d+[smhd])+$/.test(s)) return null
+  const a = k(s).reduce<{ c: number; n: string; v: number }[]>(
     (a, t, i, b) =>
-      i && !t.n && t.r < b[i - 1].r
-        ? { p: [...a.p.slice(0, -1), a.p.at(-1)! + t.v], n: a.n }
-        : { p: [...a.p, t.v], n: [...a.n, t.n] },
-    { p: [], n: [] },
+      i && !t.c && !t.n && t.r < b[i - 1].r
+        ? [...a.slice(0, -1), { ...a.at(-1)!, v: a.at(-1)!.v + t.v }]
+        : [...a, { c: t.c || 1, n: t.n, v: t.v }],
+    [],
   )
-  return a.p.every((x) => x > 0) ? a : null
+  const e = a.flatMap((x) => Array.from({ length: x.c }, () => x))
+  return a.every((x) => x.v > 0) ? { p: e.map((x) => x.v), n: e.map((x) => x.n) } : null
 }
 
 const l = (s: string): l | null => {
-  const [, n, b] = s.match(/^(?:([1-9]\d*)x)?(.+)$/) ?? []
-  const a = b ? p(b) : null
-  return a && { ...a, r: n ? +n : 1 / 0, s }
+  const a = p(s)
+  return a && { ...a, s }
 }
 
-const o = (x: l | null) => (x && (x.p.length > 1 || x.r < 1 / 0 || x.n.join('')) ? x : null)
+const o = (x: l | null) => (x && (x.p.length > 1 || x.n.join('')) ? x : null)
 
 const a = (s: string, n: number): number | null => {
   const [, h, m = '0'] = s.match(/^at(\d{1,2})(\d{2})?$/) ?? []
@@ -66,9 +71,7 @@ const f = ({ m, l }: t, n: number): f => {
   const x = n - m
   if (x < 0) return { s: -x, u: false }
   if (!l) return { s: x, u: true }
-  const c = l.p.reduce((a, b) => a + b)
-  const e = c * l.r
-  return x >= e ? { s: x - e, u: true } : j(l.p, x % c)
+  return j(l.p, x % l.p.reduce((a, b) => a + b))
 }
 
 const q = (n: number) => `${Math.floor(n)}`.padStart(2, '0')
